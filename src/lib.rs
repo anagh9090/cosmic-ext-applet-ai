@@ -74,20 +74,23 @@ impl Settings {
     }
 
     pub fn load() -> Settings {
-        let data_path = dirs::config_dir()
-            .map(|d| d.join("cosmic-ext-applet-ai").join("settings.ron"))
-            .unwrap_or_default();
-
         let settings = Settings::new();
 
-        if let Some(path) = data_path.to_str().filter(|_| data_path.exists()) {
-            if let Ok(opened) = File::open(&data_path) {
-                let reader = BufReader::new(opened);
-                if let Ok(parsed) = from_reader(reader) {
-                    return parsed;
-                }
+        let Some(data_path) = dirs::config_dir()
+            .map(|d| d.join("cosmic-ext-applet-ai").join("settings.ron"))
+        else {
+            return settings;
+        };
+
+        if let Ok(opened) = File::open(&data_path) {
+            let reader = BufReader::new(opened);
+            // A malformed settings file falls back to the defaults rather than
+            // taking the applet down with it.
+            if let Ok(parsed) = from_reader(reader) {
+                return parsed;
             }
         }
+
         settings
     }
 
