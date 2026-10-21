@@ -301,7 +301,9 @@ impl Application for Window {
                 self.model_index = Some(index);
                 self.selected_model.clone_from(&self.models[index]);
                 self.settings.set_model(self.selected_model.clone());
-                let _ = self.settings.save();
+                if let Err(err) = self.settings.save() {
+                    self.status_area_status = format!("save settings failed: {err}");
+                }
             }
             Message::ClearChat => {
                 self.prompt.clear();
@@ -311,11 +313,21 @@ impl Application for Window {
             Message::ToggleContext => {
                 self.keep_context = !self.keep_context;
                 self.settings.change_context(self.keep_context);
-                let _ = self.settings.save();
+                if let Err(err) = self.settings.save() {
+                    self.status_area_status = format!("save settings failed: {err}");
+                }
             }
-            Message::StopBot => self.last_id += 1,
+            Message::StopBot => {
+                self.last_id += 1;
+                // Cancel any in-flight stream so it doesn't restart on the new subscription.
+                self.request = StreamingRequest::Idle;
+                self.bot_response.clear();
+                self.prompt.clear();
+            },
             Message::SaveConversation => {
-                let _ = self.conversation.save_to_file();
+                if let Err(err) = self.conversation.save_to_file() {
+                    self.status_area_status = format!("save failed: {err}");
+                }
             }
             Message::SelectedConversation(index) => {
                 self.selected_saved_conv = Some(index);
@@ -335,9 +347,12 @@ impl Application for Window {
             Message::RemoveConversation => {
                 if let Some(selected_saved_conv) = self.selected_saved_conv {
                     if self.saved_conversations.len() > selected_saved_conv {
-                        let _ = self
+                        if let Err(err) = self
                             .conversation
-                            .remove(self.saved_conversations[selected_saved_conv].clone());
+                            .remove(self.saved_conversations[selected_saved_conv].clone())
+                        {
+                            self.status_area_status = format!("remove failed: {err}");
+                        }
                     }
                 }
 
@@ -402,16 +417,23 @@ impl Application for Window {
                 |path| Message::AvatarResult(path).into(),
             )),
             Message::AvatarResult(path) => {
+                if path.as_os_str().is_empty() {
+                    return Command::none(); // user cancelled picker; keep existing avatar
+                }
                 let handle = widget::image::Handle::from_path(&path);
                 self.user_avatar = handle;
                 self.settings.set_avatar(path);
-                let _ = self.settings.save();
+                if let Err(err) = self.settings.save() {
+                    self.status_area_status = format!("save avatar failed: {err}");
+                }
             }
             Message::ApiEndpointFlag(flag) => self.api_endpoint_edit = flag,
             Message::ApiEndpointInput(input) => self.api_endpoint = input,
             Message::ApiEndpointSend(endpoint) => {
                 self.settings.set_api_endpoint(endpoint.clone());
-                let _ = self.settings.save();
+                if let Err(err) = self.settings.save() {
+                    self.status_area_status = format!("save settings failed: {err}");
+                }
                 self.api_endpoint = endpoint;
                 // Refresh available models when endpoint changes.
                 self.models = available_models();
@@ -424,7 +446,9 @@ impl Application for Window {
             Message::ApiKeyInput(input) => self.api_key = input,
             Message::ApiKeySend(key) => {
                 self.settings.set_api_key(key);
-                let _ = self.settings.save();
+                if let Err(err) = self.settings.save() {
+                    self.status_area_status = format!("save settings failed: {err}");
+                }
                 // Refresh available models from new endpoint/key.
                 self.models = available_models();
                 self.model_index = self
