@@ -650,7 +650,9 @@ impl Window {
 
         match message {
             MessageContent::Image(image) => match image {
-                ImageAttachment::Svg(_) => todo!(),
+                ImageAttachment::Svg(_) => {
+                    column = column.push(widget::text("[SVG attachment]"));
+                }
                 ImageAttachment::Raster(raster) => {
                     let handle = widget::image::Handle::from_bytes(raster.data.clone());
 
@@ -706,7 +708,10 @@ impl Window {
                             content = content.push(self.bot_bubble(txt.clone()))
                         }
                     }
-                    MessageContent::Image(_) => todo!(),
+                    MessageContent::Image(_) => {
+                        // Bot image replies: render as placeholder text in message stream.
+                        content = content.push(widget::text("[Bot image response — not yet rendered]").size(14));
+                    }
                 },
             }
         }
