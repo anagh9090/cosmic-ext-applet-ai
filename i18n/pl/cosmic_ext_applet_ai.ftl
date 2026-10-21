@@ -22,4 +22,3 @@ api-key = Klucz API
 model-list = Dostępne modele
 refresh-models = Odśwież modele
 refresh = Odśwież
-refresh-models = 

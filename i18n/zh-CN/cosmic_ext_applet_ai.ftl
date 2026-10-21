@@ -22,4 +22,3 @@ api-key = API 密钥
 model-list = 可用模型
 refresh-models = 刷新模型
 refresh = 刷新
-refresh-models = 

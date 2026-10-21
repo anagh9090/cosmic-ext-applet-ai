@@ -22,4 +22,3 @@ api-key = API klíč
 model-list = Dostupné modely
 refresh-models = Obnovit modely
 refresh = Obnovit
-refresh-models = 

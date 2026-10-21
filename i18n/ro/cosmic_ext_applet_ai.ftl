@@ -23,4 +23,3 @@ api-key = Cheia API
 model-list = Modele disponibile
 refresh-models = Reîmprospătează modelele
 refresh = Reîmprospăta
-refresh-models = 

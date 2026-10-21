@@ -22,4 +22,3 @@ api-key = API ключ
 model-list = Налични модели
 refresh-models = Обновяване на моделите
 refresh = Обновяване
-refresh-models = 

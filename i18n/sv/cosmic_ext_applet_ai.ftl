@@ -22,4 +22,3 @@ api-key = API-nyckel
 model-list = Tillgängliga modeller
 refresh-models = Uppdatera modeller
 refresh = Uppdatera
-refresh-models = 
