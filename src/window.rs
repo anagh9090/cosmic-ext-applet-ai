@@ -323,9 +323,12 @@ impl Application for Window {
             Message::LoadConversation => {
                 if let Some(selected_saved_conv) = self.selected_saved_conv {
                     if self.saved_conversations.len() > selected_saved_conv {
-                        self.conversation = load_conversation(
+                        match load_conversation(
                             self.saved_conversations[selected_saved_conv].clone(),
-                        );
+                        ) {
+                            Ok(conversation) => self.conversation = conversation,
+                            Err(err) => self.status_area_status = format!("{err}"),
+                        }
                     }
                 }
             }
