@@ -1,41 +1,26 @@
 use futures::Stream;
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::Settings;
 
 #[derive(Serialize)]
-struct GenerateNonContext {
-    model: String,
-    prompt: String,
-    images: Vec<String>,
-    stream: bool,
-    keep_alive: String,
+struct ChatMessage {
+    role: String,
+    content: String,
 }
 
 #[derive(Serialize)]
-struct GenerateWithContext {
+struct ChatCompletionRequest {
     model: String,
-    prompt: String,
+    messages: Vec<ChatMessage>,
     stream: bool,
-    images: Vec<String>,
-    context: Vec<u64>,
-    keep_alive: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct BotResponse {
-    pub model: String,
-    pub created_at: String,
     pub response: String,
-    pub done: bool,
     pub context: Option<Vec<u64>>,
-    pub total_duration: Option<u64>,
-    pub load_duration: Option<u64>,
-    pub prompt_eval_count: Option<u64>,
-    pub prompt_eval_duration: Option<u64>,
-    pub eval_count: Option<u64>,
-    pub eval_duration: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -45,142 +30,85 @@ impl Bot {
     pub async fn new(
         model: String,
         prompt: String,
-        images: Vec<String>,
-        context: Option<Vec<u64>>,
-        keep_alive: String,
+        _images: Vec<String>,
+        history: Vec<(String, String)>,
+        _keep_alive: String,
     ) -> anyhow::Result<(
         Self,
-        impl Stream<Item = anyhow::Result<bytes::Bytes, reqwest::Error>>,
+        impl Stream<Item = anyhow::Result<BotResponse, reqwest::Error>>,
     )> {
         let settings = Settings::load();
-        let client = Client::new().post(format!("http://{}/api/generate", settings.ollama_address));
+        let client = Client::new();
 
-        let stream = if context.is_none() {
-            let no_context_query = GenerateNonContext {
-                model,
-                prompt,
-                images,
-                keep_alive,
-                stream: true,
-            };
-
-            client
-                .json::<GenerateNonContext>(&no_context_query)
-                .send()
-                .await
-                .unwrap()
-                .bytes_stream()
+        // The model is taken from the settings so a change made in the settings
+        // page takes effect immediately, falling back to the requested one.
+        let model = if settings.model.is_empty() {
+            model
         } else {
-            let context_query = GenerateWithContext {
-                model,
-                prompt,
-                images,
-                stream: true,
-                keep_alive,
-                context: context.unwrap(),
-            };
-
-            client
-                .json::<GenerateWithContext>(&context_query)
-                .send()
-                .await
-                .unwrap()
-                .bytes_stream()
+            settings.model.clone()
         };
 
-        let bot = Self {};
+        let mut messages: Vec<ChatMessage> = history
+            .into_iter()
+            .map(|(role, content)| ChatMessage { role, content })
+            .collect();
 
-        Ok((bot, stream))
-    }
-}
+        messages.push(ChatMessage {
+            role: "user".to_string(),
+            content: prompt,
+        });
 
-#[derive(Serialize)]
-pub struct PullModelQuery {
-    name: String,
-}
+        let request = ChatCompletionRequest {
+            model,
+            messages,
+            stream: false,
+        };
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct PullModelResponse {
-    pub status: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct PullModel {}
-
-impl PullModel {
-    pub async fn new(
-        model: String,
-    ) -> anyhow::Result<(
-        Self,
-        impl Stream<Item = anyhow::Result<bytes::Bytes, reqwest::Error>>,
-    )> {
-        let settings = Settings::load();
-        let client = Client::new().post(format!("http://{}/api/pull", settings.ollama_address));
-
-        let pull_query = PullModelQuery { name: model };
-
-        let stream = client
-            .json::<PullModelQuery>(&pull_query)
+        let response = client
+            .post(format!("{}/chat/completions", settings.api_endpoint))
+            .header("Authorization", format!("Bearer {}", settings.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
             .send()
-            .await
-            .unwrap()
-            .bytes_stream();
+            .await?;
 
-        let pull = Self {};
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            anyhow::bail!("API error {}: {}", status, body);
+        }
 
-        Ok((pull, stream))
-    }
-}
+        let text: String = response.text().await?;
+        let response_json: serde_json::Value = serde_json::from_str(&text)?;
 
-#[derive(Debug, Serialize)]
-pub struct RemoveModelQuery {
-    name: String,
-}
+        let content = response_json
+            .get("choices")
+            .and_then(|c| c.get(0))
+            .and_then(|c| c.get("message"))
+            .and_then(|m| m.get("content"))
+            .and_then(|c| c.as_str())
+            .unwrap_or("")
+            .to_string();
 
-#[derive(Debug, Clone)]
-pub struct RemoveModel {}
+        let bot_response = BotResponse {
+            response: content,
+            context: None,
+        };
 
-impl RemoveModel {
-    pub async fn new(model: String) -> anyhow::Result<(Self, StatusCode)> {
-        let settings = Settings::load();
-        let client = Client::new().delete(format!("http://{}/api/delete", settings.ollama_address));
-
-        let remove_query = RemoveModelQuery { name: model };
-
-        let request = client
-            .json::<RemoveModelQuery>(&remove_query)
-            .send()
-            .await?
-            .status();
-
-        let remove = RemoveModel {};
-
-        Ok((remove, request))
+        Ok((Self {}, futures::stream::once(async move { Ok(bot_response) })))
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Tags {
-    pub models: Vec<Model>,
+    pub data: Vec<Model>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Model {
-    pub name: String,
-    pub model: String,
-    pub modified_at: Option<String>,
-    pub size: Option<u64>,
-    pub digest: Option<String>,
-    pub details: Option<ModelDetails>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ModelDetails {
-    pub format: Option<String>,
-    pub family: Option<String>,
-    pub families: Option<Vec<String>>,
-    pub parameter_size: Option<String>,
-    pub quantization_level: Option<String>,
+    pub id: String,
+    pub created: Option<u64>,
+    pub owned_by: Option<String>,
 }
 
 #[derive(Debug)]
@@ -191,19 +119,15 @@ pub struct ListModels {
 impl ListModels {
     pub fn new() -> Self {
         let settings = Settings::load();
-        let client = reqwest::blocking::Client::new()
-            .get(format!("http://{}/api/tags", settings.ollama_address));
+        let client = reqwest::blocking::Client::new();
 
-        let request = client.send();
+        let result = client
+            .get(format!("{}/models", settings.api_endpoint))
+            .header("Authorization", format!("Bearer {}", settings.api_key))
+            .header("Content-Type", "application/json")
+            .send()
+            .and_then(|response| response.json::<Tags>());
 
-        if let Ok(result) = request {
-            Self {
-                result: result.json::<Tags>(),
-            }
-        } else {
-            Self {
-                result: Ok(Tags { models: Vec::new() }),
-            }
-        }
+        Self { result }
     }
 }

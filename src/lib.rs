@@ -23,9 +23,9 @@ pub fn run() -> cosmic::iced::Result {
 pub struct Settings {
     avatar: PathBuf,
     keep_context: bool,
+    api_endpoint: String,
+    api_key: String,
     model: String,
-    ollama_address: String,
-    keep_alive_model: String,
 }
 
 impl Settings {
@@ -33,9 +33,9 @@ impl Settings {
         Self {
             avatar: PathBuf::new(),
             keep_context: true,
-            model: String::new(),
-            ollama_address: "localhost:11434".to_string(),
-            keep_alive_model: "5m".into(),
+            api_endpoint: "https://api.openai.com/v1".to_string(),
+            api_key: String::new(),
+            model: "gpt-4o-mini".to_string(),
         }
     }
 
@@ -63,20 +63,20 @@ impl Settings {
         self
     }
 
-    pub fn set_ollama_address(&mut self, ip_port: String) -> &mut Self {
-        self.ollama_address = ip_port;
+    pub fn set_api_endpoint(&mut self, endpoint: String) -> &mut Self {
+        self.api_endpoint = endpoint;
         self
     }
 
-    pub fn set_keep_alive_model(&mut self, time: String) -> &mut Self {
-        self.keep_alive_model = time;
+    pub fn set_api_key(&mut self, key: String) -> &mut Self {
+        self.api_key = key;
         self
     }
 
     pub fn load() -> Settings {
         let data_path = dirs::config_dir()
             .expect("xdg-config not found")
-            .join("cosmic-ext-applet-ollama")
+            .join("cosmic-ext-applet-ai")
             .join("settings.ron");
 
         let settings: Settings = Settings::new();
@@ -92,7 +92,7 @@ impl Settings {
     pub fn save(&self) -> anyhow::Result<()> {
         let data_path = dirs::config_dir()
             .expect("xdg-config not found")
-            .join("cosmic-ext-applet-ollama");
+            .join("cosmic-ext-applet-ai");
 
         fs::create_dir_all(&data_path)?;
 

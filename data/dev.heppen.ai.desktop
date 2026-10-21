@@ -1,11 +1,11 @@
 [Desktop Entry]
-Name=Ollama
+Name=COSMIC ChatAI
 Type=Application
-Exec=cosmic-ext-applet-ollama
+Exec=cosmic-ext-applet-ai
 Terminal=false
 Categories=Cosmic;Iced;
 Keywords=Cosmic;Iced;
-Icon=dev.heppen.ollama-symbolic
+Icon=dev.heppen.ai-symbolic
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true

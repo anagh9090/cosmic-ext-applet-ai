@@ -1,27 +1,34 @@
 <div align="center">
-  <h1>Ollama applet for COSMIC Desktop</h1>
+  <h1>AI Chat applet for COSMIC Desktop</h1>
   <br>
   <div>
-    <img alt="chat" src="https://github.com/cosmic-utils/cosmic-ext-applet-ollama/blob/main/screenshots/chat.png" width="280">
-    <img alt="settings" src="https://github.com/cosmic-utils/cosmic-ext-applet-ollama/blob/main/screenshots/settings.png" width="280">
+    <img alt="chat" src="https://github.com/cosmic-utils/cosmic-ext-applet-ai/blob/main/screenshots/chat.png" width="280">
+    <img alt="settings" src="https://github.com/cosmic-utils/cosmic-ext-applet-ai/blob/main/screenshots/settings.png" width="280">
   </div>
 </div>
 
-Before using this applet, you must have Ollama installed on your system. To do this, run this in your terminal:
+A COSMIC Desktop applet that talks to any OpenAI-compatible chat completion API —
+OpenAI, OpenRouter, Groq, DeepSeek, LM Studio, or a self-hosted server.
 
-```sh
-curl -fsSL https://ollama.com/install.sh | sh
-```
+# Configuration
 
-Source: [Ollama Github](https://github.com/ollama/ollama?tab=readme-ov-file#linux)
+Open the applet's **Settings** page and set:
 
-After installing Ollama. Pull some models, you would like to use with chat, for example
+| Setting      | Default                     | Description                                                        |
+| ------------ | --------------------------- | ------------------------------------------------------------------ |
+| API endpoint | `https://api.openai.com/v1` | Base URL of the OpenAI-compatible API. `/chat/completions` is appended |
+| API key      | *(empty)*                   | Sent as `Authorization: Bearer <key>`                              |
+| Model        | `gpt-4o-mini`               | Model identifier passed in the request payload                     |
 
-```sh
-ollama pull mistral
-```
+Settings are stored in `~/.config/cosmic-ext-applet-ai/settings.ron`.
 
-More models you can find in library: [Ollama/Library](https://ollama.com/library)
+Some examples of endpoints:
+
+- OpenAI — `https://api.openai.com/v1`
+- OpenRouter — `https://openrouter.ai/api/v1`
+- Groq — `https://api.groq.com/openai/v1`
+- DeepSeek — `https://api.deepseek.com/v1`
+- LM Studio (local) — `http://localhost:1234/v1`
 
 # Installing this applet
 
@@ -43,8 +50,8 @@ sudo dnf install just
 Now you can clone repo and install applet.
 
 ```sh
-git clone https://github.com/cosmic-utils/cosmic-ext-applet-ollama.git
-cd cosmic-ext-applet-ollama
+git clone https://github.com/cosmic-utils/cosmic-ext-applet-ai.git
+cd cosmic-ext-applet-ai
 ```
 
 ## Building
@@ -71,7 +78,7 @@ Cheers!
 ## Known wgpu issue
 
 There are currently some rendering issues with the `wgpu` libcosmic features
-in some (older?) gpus. This doesn't affect Ollama, only the applet.
+in some (older?) gpus. This doesn't affect the API, only the applet.
 If you are affected by this, you can build and install it with this feature disabled:
 
 ```sh

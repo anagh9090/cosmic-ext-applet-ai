@@ -29,12 +29,12 @@ use crate::{
         MessageContent, Text,
     },
     fl,
-    models::installed_models,
+    models::available_models,
     stream::{self, service},
     Settings,
 };
 
-const ID: &str = "dev.heppen.ollama";
+const ID: &str = "dev.heppen.ai";
 
 #[derive(Debug, Clone)]
 pub enum Pages {
@@ -47,8 +47,6 @@ pub enum StreamingRequest {
     Idle,
     Ask,
     AskWithContext,
-    PullModel,
-    RemoveModel,
 }
 
 #[derive(Debug, Clone)]
@@ -61,7 +59,8 @@ pub enum Message {
     SendPrompt(String),
     ChangeModel(usize),
     ClearChat,
-    ModelPullInput(String),
+    ModelNameInput(String),
+    ModelNameSend(String),
     BotEvent(stream::Event),
     ToggleContext,
     StopBot,
@@ -69,17 +68,15 @@ pub enum Message {
     SelectedConversation(usize),
     LoadConversation,
     RemoveConversation,
-    PullModel,
-    ModelsDelSelector(usize),
-    DelModel,
     OpenImages,
     ImagesResult(Vec<Image>),
     FindAvatar,
     AvatarResult(PathBuf),
-    OllamaAdressFlag(bool),
-    OllamaAddressInput(String),
-    OllamaAddressSend(String),
-    SetKeepAliveTime(String),
+    ApiEndpointFlag(bool),
+    ApiEndpointInput(String),
+    ApiEndpointSend(String),
+    ApiKeyInput(String),
+    ApiKeySend(String),
     OpenLink(iced::widget::markdown::Url),
 }
 
@@ -102,14 +99,12 @@ pub struct Window {
     saved_conversations: Vec<String>,
     selected_saved_conv: Option<usize>,
     request: StreamingRequest,
-    model_to_pull: String,
-    del_model_index: Option<usize>,
-    delete_this_model: String,
+    model_name: String,
     status_area_status: String,
     user_avatar: widget::image::Handle,
-    ollama_address: String,
-    ollama_address_edit: bool,
-    keep_alive_model: String,
+    api_endpoint: String,
+    api_endpoint_edit: bool,
+    api_key: String,
     settings: Settings,
 }
 
@@ -132,17 +127,12 @@ impl Application for Window {
 
     fn init(core: Core, _flags: Self::Flags) -> (Self, Command<Action<Message>>) {
         let system_messages = Vec::new();
-        let models: Vec<String> = installed_models();
+        let models: Vec<String> = available_models();
         let settings = Settings::load();
         let model_index = models
             .clone()
             .into_iter()
             .position(|model| model == settings.model);
-        let delete_this_model = if !models.is_empty() {
-            models[0].clone()
-        } else {
-            String::new()
-        };
 
         (
             Self {
@@ -164,14 +154,12 @@ impl Application for Window {
                 saved_conversations: Vec::new(),
                 selected_saved_conv: Some(0),
                 request: StreamingRequest::Idle,
-                model_to_pull: String::new(),
-                del_model_index: Some(0),
-                delete_this_model,
+                model_name: settings.model.clone(),
                 status_area_status: String::new(),
                 user_avatar: settings.get_avatar_handle(),
-                ollama_address: settings.ollama_address.clone(),
-                ollama_address_edit: false,
-                keep_alive_model: settings.keep_alive_model.clone(),
+                api_endpoint: settings.api_endpoint.clone(),
+                api_endpoint_edit: false,
+                api_key: settings.api_key.clone(),
                 settings,
             },
             Command::none(),
@@ -250,7 +238,6 @@ impl Application for Window {
                                 self.selected_model.clone(),
                                 self.prompt.clone(),
                                 self.images.clone(),
-                                self.keep_alive_model.clone(),
                             )))
                         }
                         StreamingRequest::AskWithContext => {
@@ -258,19 +245,8 @@ impl Application for Window {
                                 self.selected_model.clone(),
                                 self.prompt.clone(),
                                 self.images.clone(),
-                                self.context.clone(),
-                                self.keep_alive_model.clone(),
+                                Vec::new(),
                             )))
-                        }
-                        StreamingRequest::PullModel => {
-                            _ = tx.blocking_send(stream::Request::PullModel(
-                                self.model_to_pull.clone(),
-                            ))
-                        }
-                        StreamingRequest::RemoveModel => {
-                            _ = tx.blocking_send(stream::Request::RemoveModel(
-                                self.delete_this_model.clone(),
-                            ))
                         }
                         StreamingRequest::Idle => {}
                     }
@@ -288,20 +264,6 @@ impl Application for Window {
                     self.bot_response.clear();
                     self.images.clear();
                     self.request = StreamingRequest::Idle;
-                }
-                stream::Event::PullResponse(status) => {
-                    self.status_area_status = status.status;
-                }
-                stream::Event::PullDone => {
-                    self.status_area_status.clear();
-                    self.models = installed_models();
-                }
-                stream::Event::RemovedModel => {
-                    self.status_area_status.clear();
-                    self.models = installed_models();
-                }
-                stream::Event::RemoveStatus(status) => {
-                    self.status_area_status = status;
                 }
             },
             Message::ChangeModel(index) => {
@@ -347,17 +309,11 @@ impl Application for Window {
 
                 self.saved_conversations = read_conversation_files().unwrap();
             }
-            Message::PullModel => {
-                self.last_id += 1;
-                self.request = StreamingRequest::PullModel;
-            }
-            Message::ModelsDelSelector(index) => {
-                self.del_model_index = Some(index);
-                self.delete_this_model.clone_from(&self.models[index]);
-            }
-            Message::DelModel => {
-                self.last_id += 1;
-                self.request = StreamingRequest::RemoveModel;
+            Message::ModelNameInput(name) => self.model_name = name,
+            Message::ModelNameSend(name) => {
+                self.settings.set_model(name);
+                self.selected_model.clone_from(&self.settings.model);
+                let _ = self.settings.save();
             }
             Message::OpenImages => {
                 commands.push(Command::perform(
@@ -395,7 +351,6 @@ impl Application for Window {
                     )));
                 }
             }
-            Message::ModelPullInput(model) => self.model_to_pull = model,
             Message::FindAvatar => commands.push(Command::perform(
                 async move {
                     let result = SelectedFiles::open_file()
@@ -429,16 +384,15 @@ impl Application for Window {
                 self.settings.set_avatar(path);
                 let _ = self.settings.save();
             }
-            Message::OllamaAdressFlag(flag) => self.ollama_address_edit = flag,
-            Message::OllamaAddressInput(input) => self.ollama_address = input,
-            Message::OllamaAddressSend(addr) => {
-                self.settings.set_ollama_address(addr);
+            Message::ApiEndpointFlag(flag) => self.api_endpoint_edit = flag,
+            Message::ApiEndpointInput(input) => self.api_endpoint = input,
+            Message::ApiEndpointSend(endpoint) => {
+                self.settings.set_api_endpoint(endpoint);
                 let _ = self.settings.save();
             }
-            Message::SetKeepAliveTime(time_string) => {
-                self.keep_alive_model = time_string;
-                self.settings
-                    .set_keep_alive_model(self.keep_alive_model.clone());
+            Message::ApiKeyInput(input) => self.api_key = input,
+            Message::ApiKeySend(key) => {
+                self.settings.set_api_key(key);
                 let _ = self.settings.save();
             }
             Message::OpenLink(url) => {
@@ -452,7 +406,7 @@ impl Application for Window {
     fn view(&self) -> Element<'_, Self::Message> {
         self.core
             .applet
-            .icon_button("dev.heppen.ollama-symbolic")
+            .icon_button("dev.heppen.ai-symbolic")
             .on_press(Message::TogglePopup)
             .into()
     }
@@ -560,42 +514,33 @@ impl Window {
                 widget::button::standard(fl!("remove")).on_press(Message::RemoveConversation),
             ));
 
-        let models_section = settings::section()
+        let connection_section = settings::section()
             .title(fl!("manage-models"))
-            .add(settings::item_row(vec![
-                widget::text_input("llava:latest", &self.model_to_pull)
-                    .width(Length::Fill)
-                    .on_input(Message::ModelPullInput)
-                    .into(),
-                widget::button::standard(fl!("pull-model"))
-                    .on_press(Message::PullModel)
-                    .into(),
-            ]))
-            .add(settings::item_row(vec![
+            .add(settings::item(
+                fl!("api-endpoint"),
+                widget::editable_input(
+                    "https://api.openai.com/v1",
+                    &self.api_endpoint,
+                    self.api_endpoint_edit,
+                    Message::ApiEndpointFlag,
+                )
+                .on_input(Message::ApiEndpointInput)
+                .on_submit(Message::ApiEndpointSend),
+            ))
+            .add(settings::item(
+                fl!("api-key"),
+                widget::text_input("", &self.api_key)
+                    .on_input(Message::ApiKeyInput)
+                    .on_submit(Message::ApiKeySend),
+            ))
+            .add(settings::item(
+                fl!("select-model"),
                 widget::dropdown(
                     &self.models,
-                    self.del_model_index,
-                    Message::ModelsDelSelector,
+                    self.model_index,
+                    Message::ChangeModel,
                 )
-                .width(Length::Fill)
-                .into(),
-                widget::button::standard(fl!("remove-model"))
-                    .on_press(Message::DelModel)
-                    .into(),
-            ]))
-            .add(settings::item_row(vec![widget::editable_input(
-                "IP:PORT",
-                &self.ollama_address,
-                self.ollama_address_edit,
-                Message::OllamaAdressFlag,
-            )
-            .on_input(Message::OllamaAddressInput)
-            .on_submit(Message::OllamaAddressSend)
-            .into()]))
-            .add(settings::item(
-                fl!("keep-alive"),
-                widget::text_input("5m", &self.keep_alive_model)
-                    .on_input(Message::SetKeepAliveTime),
+                .width(Length::Fill),
             ));
 
         let spacer = widget::Space::with_height(Length::Fill);
@@ -607,7 +552,7 @@ impl Window {
 
         let mut content = widget::column()
             .push(conv_section)
-            .push(models_section)
+            .push(connection_section)
             .push(spacer)
             .spacing(20);
 

@@ -8,7 +8,7 @@ vendor_args := if vendor == '1' { '--frozen --offline' } else { '' }
 debug_args := if debug == '1' { '' } else { '--release' }
 cargo_args := vendor_args + ' ' + debug_args
 
-name := 'cosmic-ext-applet-ollama'
+name := 'cosmic-ext-applet-ai'
 
 targetdir := env('CARGO_TARGET_DIR', 'target')
 sharedir := rootdir + prefix + '/share'
@@ -40,7 +40,7 @@ _link_applet name:
     ln -sf {{cosmic-applets-bin}} {{bindir}}/{{name}}
 
 _install_icon:
-    install -Dm0644 'data/icons/scalable/apps/dev.heppen.ollama-symbolic.svg' {{iconsdir}}/dev.heppen.ollama-symbolic.svg
+    install -Dm0644 'data/icons/scalable/apps/dev.heppen.ai-symbolic.svg' {{iconsdir}}/dev.heppen.ai-symbolic.svg
 
 _install_desktop path:
     install -Dm0644 {{path}} {{sharedir}}/applications/{{file_name(path)}}
@@ -55,13 +55,13 @@ _install_applet id name: \
 
 
 # Installs files into the system
-install:(_install_applet 'dev.heppen.ollama' 'cosmic-ext-applet-ollama') 
+install:(_install_applet 'dev.heppen.ai' 'cosmic-ext-applet-ai')
 
 # Uninstall the application from the system
 uninstall:
     rm -f {{bindir}}/{{name}}
-    rm -f {{iconsdir}}/dev.heppen.ollama-symbolic.svg
-    rm -f {{sharedir}}/applications/dev.heppen.ollama.desktop
+    rm -f {{iconsdir}}/dev.heppen.ai-symbolic.svg
+    rm -f {{sharedir}}/applications/dev.heppen.ai.desktop
 
 # Vendor Cargo dependencies locally
 vendor:

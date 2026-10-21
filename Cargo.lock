@@ -1061,8 +1061,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmic-ext-applet-ollama"
-version = "0.1.1"
+name = "cosmic-ext-applet-ai"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "ashpd 0.12.0",
