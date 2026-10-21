@@ -10,6 +10,7 @@ use crate::api::{Bot, BotResponse};
 pub enum Event {
     Ready(mpsc::Sender<Request>),
     Response(BotResponse),
+    Error(String),
     Done,
 }
 
@@ -70,7 +71,8 @@ async fn client_request<'a>(
             let _res = tokio::task::spawn(listener);
             Some(new_client)
         }
-        Err(_) => {
+        Err(err) => {
+            let _res = tx.send(Event::Error(format!("{err}"))).await;
             let _res = tx.send(Event::Done).await;
             None
         }

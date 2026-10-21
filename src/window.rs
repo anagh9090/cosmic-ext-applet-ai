@@ -283,7 +283,10 @@ impl Application for Window {
                 }
                 stream::Event::Response(message) => {
                     self.bot_response.push_str(&message.response);
-
+                    commands.push(snap_to(self.chat_id.clone(), RelativeOffset::END));
+                }
+                stream::Event::Error(msg) => {
+                    self.status_area_status = msg;
                     commands.push(snap_to(self.chat_id.clone(), RelativeOffset::END));
                 }
                 stream::Event::Done => {
