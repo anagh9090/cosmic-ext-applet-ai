@@ -1,5 +1,5 @@
 {
-  "name": "OllamaApplet",
+  "name": "COSMIC AI Chat",
   "build": {
     "dockerfile": "Containerfile",
     "context": ".."

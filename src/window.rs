@@ -59,8 +59,6 @@ pub enum Message {
     SendPrompt(String),
     ChangeModel(usize),
     ClearChat,
-    ModelNameInput(String),
-    ModelNameSend(String),
     BotEvent(stream::Event),
     ToggleContext,
     StopBot,
@@ -99,7 +97,6 @@ pub struct Window {
     saved_conversations: Vec<String>,
     selected_saved_conv: Option<usize>,
     request: StreamingRequest,
-    model_name: String,
     status_area_status: String,
     user_avatar: widget::image::Handle,
     api_endpoint: String,
@@ -154,7 +151,6 @@ impl Application for Window {
                 saved_conversations: Vec::new(),
                 selected_saved_conv: Some(0),
                 request: StreamingRequest::Idle,
-                model_name: settings.model.clone(),
                 status_area_status: String::new(),
                 user_avatar: settings.get_avatar_handle(),
                 api_endpoint: settings.api_endpoint.clone(),
@@ -234,18 +230,52 @@ impl Application for Window {
                 stream::Event::Ready(tx) => {
                     match self.request {
                         StreamingRequest::Ask => {
+                            // Images are carried as (mime_type, base64) tuples.
+                            let images: Vec<(String, String)> = self
+                                .images
+                                .iter()
+                                .map(|img| ("image/jpeg".to_string(), img.clone()))
+                                .collect();
+
                             _ = tx.blocking_send(stream::Request::Ask((
                                 self.selected_model.clone(),
                                 self.prompt.clone(),
-                                self.images.clone(),
+                                images,
                             )))
                         }
                         StreamingRequest::AskWithContext => {
+                            // Convert the conversation history to (role, content) pairs.
+                            let history: Vec<(String, String)> = self
+                                .conversation
+                                .messages
+                                .iter()
+                                .map(|msg| {
+                                    let role = match msg {
+                                        Text::User(_) => "user",
+                                        Text::Bot(_) => "assistant",
+                                    };
+                                    let content = match msg {
+                                        Text::User(MessageContent::Text(t))
+                                        | Text::Bot(MessageContent::Text(t)) => t.clone(),
+                                        _ => String::new(),
+                                    };
+                                    (role.to_string(), content)
+                                })
+                                .filter(|(_, c)| !c.is_empty())
+                                .collect();
+
+                            // Images are carried as (mime_type, base64) tuples.
+                            let images: Vec<(String, String)> = self
+                                .images
+                                .iter()
+                                .map(|img| ("image/jpeg".to_string(), img.clone()))
+                                .collect();
+
                             _ = tx.blocking_send(stream::Request::AskWithContext((
                                 self.selected_model.clone(),
                                 self.prompt.clone(),
-                                self.images.clone(),
-                                Vec::new(),
+                                images,
+                                history,
                             )))
                         }
                         StreamingRequest::Idle => {}
@@ -308,12 +338,6 @@ impl Application for Window {
                 }
 
                 self.saved_conversations = read_conversation_files().unwrap();
-            }
-            Message::ModelNameInput(name) => self.model_name = name,
-            Message::ModelNameSend(name) => {
-                self.settings.set_model(name);
-                self.selected_model.clone_from(&self.settings.model);
-                let _ = self.settings.save();
             }
             Message::OpenImages => {
                 commands.push(Command::perform(

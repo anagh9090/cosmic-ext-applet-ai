@@ -15,8 +15,10 @@ pub enum Event {
 
 #[derive(Debug, Clone)]
 pub enum Request {
-    Ask((String, String, Vec<String>)),
-    AskWithContext((String, String, Vec<String>, Vec<(String, String)>)),
+    // (model, prompt, images)
+    Ask((String, String, Vec<(String, String)>)),
+    // (model, prompt, images, history)
+    AskWithContext((String, String, Vec<(String, String)>, Vec<(String, String)>)),
 }
 
 pub fn service() -> impl Stream<Item = Event> + MaybeSend {
@@ -50,7 +52,7 @@ pub fn service() -> impl Stream<Item = Event> + MaybeSend {
 async fn client_request<'a>(
     model: String,
     prompt: String,
-    images: Vec<String>,
+    images: Vec<(String, String)>,
     history: Vec<(String, String)>,
     tx: &mpsc::Sender<Event>,
     client: &'a mut Option<Bot>,
