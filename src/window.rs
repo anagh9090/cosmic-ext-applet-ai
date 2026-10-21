@@ -466,9 +466,9 @@ impl Application for Window {
                     .position(|m| m == self.selected_model);
             }
             Message::OpenLink(url) => {
-                if let Err(err) = open::that_in_background(url.to_string()) {
-                    self.status_area_status = format!("open link failed: {err}");
-                }
+                // open::that_in_background spawns in a background thread;
+                // errors are not recoverable synchronously.
+                open::that_in_background(url.to_string());
             }
         };
 
