@@ -20,3 +20,6 @@ user-avatar = Задаване на снимка
 api-endpoint = API крайна точка
 api-key = API ключ
 model-list = Налични модели
+refresh-models = Обновяване на моделите
+refresh = Обновяване
+refresh-models = 

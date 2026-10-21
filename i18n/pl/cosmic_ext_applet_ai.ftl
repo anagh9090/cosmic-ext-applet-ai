@@ -20,3 +20,6 @@ user-avatar = Ustaw obrazek awatara
 api-endpoint = Punkt końcowy API
 api-key = Klucz API
 model-list = Dostępne modele
+refresh-models = Odśwież modele
+refresh = Odśwież
+refresh-models = 

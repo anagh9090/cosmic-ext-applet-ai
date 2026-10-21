@@ -93,7 +93,6 @@ pub struct Window {
     last_id: usize,
     chat_id: id::Id,
     keep_context: bool,
-    context: Option<Vec<u64>>,
     images: Vec<Image>,
     saved_conversations: Vec<String>,
     selected_saved_conv: Option<usize>,
@@ -147,7 +146,6 @@ impl Application for Window {
                 last_id: 0,
                 chat_id: id::Id::new("chat"),
                 keep_context: settings.keep_context,
-                context: None,
                 images: Vec::new(),
                 saved_conversations: Vec::new(),
                 selected_saved_conv: Some(0),
@@ -590,6 +588,10 @@ impl Window {
                     Message::ChangeModel,
                 )
                 .width(Length::Fill),
+            ))
+            .add(settings::item(
+                fl!("refresh-models"),
+                widget::button::standard(fl!("refresh")).on_press(Message::RefreshModels),
             ));
 
         let spacer = widget::Space::with_height(Length::Fill);

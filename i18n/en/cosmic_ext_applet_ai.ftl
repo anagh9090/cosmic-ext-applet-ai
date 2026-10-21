@@ -20,3 +20,6 @@ api-endpoint = API endpoint
 api-key = API key
 select-model = Select model
 model-list = Available models
+refresh-models = Refresh models
+refresh = Refresh
+refresh-models = 
