@@ -1,12 +1,10 @@
 rootdir := ''
 prefix := '/usr'
-clean := '0'
 debug := '0'
 vendor := '0'
 target := if debug == '1' { 'debug' } else { 'release' }
 vendor_args := if vendor == '1' { '--frozen --offline' } else { '' }
 debug_args := if debug == '1' { '' } else { '--release' }
-cargo_args := vendor_args + ' ' + debug_args
 
 name := 'cosmic-ext-applet-ai'
 
@@ -15,8 +13,6 @@ sharedir := rootdir + prefix + '/share'
 iconsdir := sharedir + '/icons/hicolor/scalable/apps'
 prefixdir := prefix + '/bin'
 bindir := rootdir + prefixdir
-
-cosmic-applets-bin := prefixdir / 'cosmic-applets'
 
 default: run
 
@@ -35,9 +31,6 @@ build-no-wgpu *args: (build-debug '--release --no-default-features' args)
 
 # Compile with a vendored tarball
 build-vendored *args: vendor-extract (build-release '--frozen --offline' args)
-
-_link_applet name:
-    ln -sf {{cosmic-applets-bin}} {{bindir}}/{{name}}
 
 _install_icon:
     install -Dm0644 'data/icons/scalable/apps/dev.heppen.ai-symbolic.svg' {{iconsdir}}/dev.heppen.ai-symbolic.svg
