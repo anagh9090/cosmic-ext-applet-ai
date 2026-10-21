@@ -76,6 +76,7 @@ pub enum Message {
     ApiKeyInput(String),
     ApiKeySend(String),
     OpenLink(iced::widget::markdown::Url),
+    RefreshModels,
 }
 
 pub struct Window {
@@ -288,9 +289,11 @@ impl Application for Window {
                     commands.push(snap_to(self.chat_id.clone(), RelativeOffset::END));
                 }
                 stream::Event::Done => {
-                    self.conversation
-                        .push(Text::Bot(MessageContent::Text(self.bot_response.clone())));
-                    self.bot_response.clear();
+                    if !self.bot_response.is_empty() {
+                        self.conversation
+                            .push(Text::Bot(MessageContent::Text(self.bot_response.clone())));
+                        self.bot_response.clear();
+                    }
                     self.images.clear();
                     self.request = StreamingRequest::Idle;
                 }
@@ -410,13 +413,36 @@ impl Application for Window {
             Message::ApiEndpointFlag(flag) => self.api_endpoint_edit = flag,
             Message::ApiEndpointInput(input) => self.api_endpoint = input,
             Message::ApiEndpointSend(endpoint) => {
-                self.settings.set_api_endpoint(endpoint);
+                self.settings.set_api_endpoint(endpoint.clone());
                 let _ = self.settings.save();
+                self.api_endpoint = endpoint;
+                // Refresh available models when endpoint changes.
+                self.models = available_models();
+                self.model_index = self
+                    .models
+                    .clone()
+                    .into_iter()
+                    .position(|m| m == self.selected_model);
             }
             Message::ApiKeyInput(input) => self.api_key = input,
             Message::ApiKeySend(key) => {
                 self.settings.set_api_key(key);
                 let _ = self.settings.save();
+                // Refresh available models from new endpoint/key.
+                self.models = available_models();
+                self.model_index = self
+                    .models
+                    .clone()
+                    .into_iter()
+                    .position(|m| m == self.selected_model);
+            }
+            Message::RefreshModels => {
+                self.models = available_models();
+                self.model_index = self
+                    .models
+                    .clone()
+                    .into_iter()
+                    .position(|m| m == self.selected_model);
             }
             Message::OpenLink(url) => {
                 let _ = open::that_in_background(url.to_string());
