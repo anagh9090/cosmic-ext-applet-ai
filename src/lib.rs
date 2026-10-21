@@ -75,29 +75,32 @@ impl Settings {
 
     pub fn load() -> Settings {
         let data_path = dirs::config_dir()
-            .expect("xdg-config not found")
-            .join("cosmic-ext-applet-ai")
-            .join("settings.ron");
+            .map(|d| d.join("cosmic-ext-applet-ai").join("settings.ron"))
+            .unwrap_or_default();
 
-        let settings: Settings = Settings::new();
+        let settings = Settings::new();
 
-        if let Ok(opened) = File::open(data_path) {
-            let reader = BufReader::new(opened);
-            let settings: Settings = from_reader(reader).expect("Cannot parse settings file");
-            return settings;
+        if let Some(path) = data_path.to_str().filter(|_| data_path.exists()) {
+            if let Ok(opened) = File::open(&data_path) {
+                let reader = BufReader::new(opened);
+                if let Ok(parsed) = from_reader(reader) {
+                    return parsed;
+                }
+            }
         }
         settings
     }
 
     pub fn save(&self) -> anyhow::Result<()> {
-        let data_path = dirs::config_dir()
-            .expect("xdg-config not found")
-            .join("cosmic-ext-applet-ai");
+        let Some(config_dir) = dirs::config_dir() else {
+            anyhow::bail!("could not determine the user configuration directory");
+        };
+        let data_path = config_dir.join("cosmic-ext-applet-ai");
 
         fs::create_dir_all(&data_path)?;
 
         let pretty = PrettyConfig::default();
-        let ron_string = to_string_pretty(self, pretty).unwrap();
+        let ron_string = to_string_pretty(self, pretty)?;
 
         let mut file = File::create(data_path.join("settings.ron"))?;
         file.write_all(ron_string.as_bytes())?;

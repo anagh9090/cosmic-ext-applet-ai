@@ -188,7 +188,7 @@ impl Application for Window {
             Message::SettingsPage => {
                 self.page = Pages::Settings;
 
-                self.saved_conversations = read_conversation_files().unwrap();
+                self.saved_conversations = read_conversation_files().unwrap_or_default();
             }
             Message::PopupClosed(id) => {
                 if Some(id) == self.popup {
@@ -201,13 +201,11 @@ impl Application for Window {
                 } else {
                     let new_id = Id::unique();
                     self.popup.replace(new_id);
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
+                    let Some(main_id) = self.core.main_window_id() else {
+                        return Command::none();
+                    };
+                    let mut popup_settings =
+                        self.core.applet.get_popup_settings(main_id, new_id, None, None, None);
                     popup_settings.positioner.size_limits =
                         iced::Limits::NONE.width(680.0).height(800.0);
                     return get_popup(popup_settings);
@@ -340,12 +338,12 @@ impl Application for Window {
                     }
                 }
 
-                self.saved_conversations = read_conversation_files().unwrap();
+                self.saved_conversations = read_conversation_files().unwrap_or_default();
             }
             Message::OpenImages => {
                 commands.push(Command::perform(
                     async move {
-                        let result = SelectedFiles::open_file()
+                        let Ok(response) = SelectedFiles::open_file()
                             .title("Open multiple images")
                             .accept_label("Attach")
                             .modal(true)
@@ -354,18 +352,16 @@ impl Application for Window {
                             .filter(FileFilter::new("PNG Image").glob("*.png"))
                             .send()
                             .await
-                            .unwrap()
-                            .response();
+                            .and_then(|s| s.response())
+                        else {
+                            return Vec::new();
+                        };
 
-                        if let Ok(result) = result {
-                            result
-                                .uris()
-                                .iter()
-                                .map(|file| Image::new(file.path()))
-                                .collect::<Vec<Image>>()
-                        } else {
-                            Vec::new()
-                        }
+                        response
+                            .uris()
+                            .iter()
+                            .filter_map(|file| Image::new(file.path()).ok())
+                            .collect::<Vec<Image>>()
                     },
                     |files| Message::ImagesResult(files).into(),
                 ));
@@ -380,7 +376,7 @@ impl Application for Window {
             }
             Message::FindAvatar => commands.push(Command::perform(
                 async move {
-                    let result = SelectedFiles::open_file()
+                    let Ok(response) = SelectedFiles::open_file()
                         .title("Open image")
                         .accept_label("Attach")
                         .modal(true)
@@ -389,19 +385,16 @@ impl Application for Window {
                         .filter(FileFilter::new("PNG Image").glob("*.png"))
                         .send()
                         .await
-                        .unwrap()
-                        .response();
+                        .and_then(|s| s.response())
+                    else {
+                        return PathBuf::new();
+                    };
 
-                    if let Ok(result) = result {
-                        let path = result.uris().first().unwrap();
-                        if let Ok(path) = path.to_file_path() {
-                            path
-                        } else {
-                            PathBuf::new()
-                        }
-                    } else {
-                        PathBuf::new()
-                    }
+                    response
+                        .uris()
+                        .first()
+                        .and_then(|u| u.to_file_path().ok())
+                        .unwrap_or_default()
                 },
                 |path| Message::AvatarResult(path).into(),
             )),

@@ -66,19 +66,19 @@ fn detect_mime(path: &str, data: &[u8]) -> String {
 }
 
 impl Image {
-    pub fn new(path: &str) -> Self {
-        let mut file = File::open(path).expect("Failed to open file");
+    pub fn new(path: &str) -> anyhow::Result<Self> {
+        let mut file = File::open(path)?;
         let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer).expect("Failed to read file");
+        file.read_to_end(&mut buffer)?;
 
         let mime_type = detect_mime(path, &buffer);
         let data = bytes::Bytes::from(buffer);
 
-        Self {
+        Ok(Self {
             base64: BASE64_STANDARD.encode(&data),
             mime_type,
             data,
-        }
+        })
     }
 
     /// The MIME type of this image, e.g. `image/png`.
@@ -105,9 +105,10 @@ impl Conversation {
     }
 
     pub fn save_to_file(&self) -> anyhow::Result<()> {
-        let data_path = dirs::data_dir()
-            .expect("xdg-data not found")
-            .join("cosmic-ext-applet-ai/chat");
+        let Some(data_dir) = dirs::data_dir() else {
+            anyhow::bail!("could not determine the user data directory");
+        };
+        let data_path = data_dir.join("cosmic-ext-applet-ai/chat");
 
         fs::create_dir_all(&data_path)?;
 
@@ -116,7 +117,7 @@ impl Conversation {
         let filename = format!("{}.ron", formatted);
 
         let pretty = PrettyConfig::default();
-        let ron_string = to_string_pretty(self, pretty).unwrap();
+        let ron_string = to_string_pretty(self, pretty)?;
 
         let mut file = File::create(data_path.join(filename))?;
         file.write_all(ron_string.as_bytes())?;
@@ -125,8 +126,10 @@ impl Conversation {
     }
 
     pub fn remove(&self, filename: String) -> anyhow::Result<()> {
-        let data_path = dirs::data_dir()
-            .expect("xdg-data not found")
+        let Some(data_dir) = dirs::data_dir() else {
+            anyhow::bail!("could not determine user data dir");
+        };
+        let data_path = data_dir
             .join("cosmic-ext-applet-ai/chat")
             .join(format!("{}.ron", &filename));
 
@@ -137,35 +140,34 @@ impl Conversation {
 }
 
 pub fn read_conversation_files() -> anyhow::Result<Vec<String>> {
-    let data_path = dirs::data_dir()
-        .expect("xdg-data not found")
-        .join("cosmic-ext-applet-ai/chat");
+    let Some(data_dir) = dirs::data_dir() else {
+        anyhow::bail!("could not determine user data dir");
+    };
+    let data_path = data_dir.join("cosmic-ext-applet-ai/chat");
 
     let mut conversations = Vec::new();
 
-    if let Ok(entries) = fs::read_dir(data_path) {
+    if let Ok(entries) = fs::read_dir(&data_path) {
         for entry in entries.flatten() {
-            conversations.push(
-                entry
-                    .path()
-                    .file_stem()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .to_owned(),
-            );
+            if let Some(stem) = entry.path().file_stem() {
+                if let Some(s) = stem.to_str() {
+                    conversations.push(s.to_owned());
+                }
+            }
         }
     }
 
     Ok(conversations)
 }
 
-pub fn load_conversation(filename: String) -> Conversation {
-    let data_path = dirs::data_dir()
-        .expect("xdg-data not found")
+pub fn load_conversation(filename: String) -> anyhow::Result<Conversation> {
+    let Some(data_dir) = dirs::data_dir() else {
+        anyhow::bail!("could not determine user data dir");
+    };
+    let data_path = data_dir
         .join("cosmic-ext-applet-ai/chat")
         .join(format!("{}.ron", filename));
 
-    let contents = fs::read_to_string(data_path).unwrap();
-    from_str(&contents).unwrap()
+    let contents = fs::read_to_string(&data_path)?;
+    Ok(from_str(&contents)?)
 }
