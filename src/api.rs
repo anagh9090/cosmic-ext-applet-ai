@@ -41,7 +41,6 @@ struct ChatCompletionRequest {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct BotResponse {
     pub response: String,
-    pub context: Option<Vec<u64>>,
 }
 
 #[derive(Debug)]
@@ -134,7 +133,6 @@ impl Bot {
 
         let bot_response = BotResponse {
             response: content,
-            context: None,
         };
 
         Ok((Self {}, futures::stream::once(async move { Ok(bot_response) })))

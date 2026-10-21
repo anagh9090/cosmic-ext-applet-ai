@@ -31,8 +31,38 @@ pub enum ImageAttachment {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Image {
     pub base64: String,
+    #[serde(default = "default_mime")]
+    pub mime_type: String,
     #[serde(skip)]
     pub data: bytes::Bytes,
+}
+
+fn default_mime() -> String {
+    "image/jpeg".to_string()
+}
+
+/// Detect the MIME type of an image from its magic bytes, falling back to the
+/// file extension and finally to `image/jpeg`.
+fn detect_mime(path: &str, data: &[u8]) -> String {
+    if data.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
+        "image/png".to_string()
+    } else if data.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "image/jpeg".to_string()
+    } else if data.starts_with(b"GIF87a") || data.starts_with(b"GIF89a") {
+        "image/gif".to_string()
+    } else {
+        match std::path::Path::new(path)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.to_ascii_lowercase())
+            .as_deref()
+        {
+            Some("png") => "image/png".to_string(),
+            Some("jpg") | Some("jpeg") => "image/jpeg".to_string(),
+            Some("gif") => "image/gif".to_string(),
+            _ => default_mime(),
+        }
+    }
 }
 
 impl Image {
@@ -41,12 +71,19 @@ impl Image {
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).expect("Failed to read file");
 
+        let mime_type = detect_mime(path, &buffer);
         let data = bytes::Bytes::from(buffer);
 
         Self {
             base64: BASE64_STANDARD.encode(&data),
+            mime_type,
             data,
         }
+    }
+
+    /// The MIME type of this image, e.g. `image/png`.
+    pub fn mime(&self) -> String {
+        self.mime_type.clone()
     }
 }
 

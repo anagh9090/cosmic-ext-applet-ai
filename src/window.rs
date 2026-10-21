@@ -93,7 +93,7 @@ pub struct Window {
     chat_id: id::Id,
     keep_context: bool,
     context: Option<Vec<u64>>,
-    images: Vec<String>,
+    images: Vec<Image>,
     saved_conversations: Vec<String>,
     selected_saved_conv: Option<usize>,
     request: StreamingRequest,
@@ -234,7 +234,7 @@ impl Application for Window {
                             let images: Vec<(String, String)> = self
                                 .images
                                 .iter()
-                                .map(|img| ("image/jpeg".to_string(), img.clone()))
+                                .map(|img| (img.mime(), img.base64.clone()))
                                 .collect();
 
                             _ = tx.blocking_send(stream::Request::Ask((
@@ -268,7 +268,7 @@ impl Application for Window {
                             let images: Vec<(String, String)> = self
                                 .images
                                 .iter()
-                                .map(|img| ("image/jpeg".to_string(), img.clone()))
+                                .map(|img| (img.mime(), img.base64.clone()))
                                 .collect();
 
                             _ = tx.blocking_send(stream::Request::AskWithContext((
@@ -284,7 +284,6 @@ impl Application for Window {
                 }
                 stream::Event::Response(message) => {
                     self.bot_response.push_str(&message.response);
-                    self.context = message.context;
 
                     commands.push(snap_to(self.chat_id.clone(), RelativeOffset::END));
                 }
@@ -369,7 +368,7 @@ impl Application for Window {
             }
             Message::ImagesResult(result) => {
                 for image in result {
-                    self.images.push(image.base64.clone());
+                    self.images.push(image.clone());
                     self.conversation.push(Text::User(MessageContent::Image(
                         ImageAttachment::Raster(image),
                     )));
