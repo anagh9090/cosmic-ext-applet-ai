@@ -2,6 +2,7 @@
 name = "cosmic-ext-applet-ai"
 version = "0.2.0"
 edition = "2024"
+authors = ["Anagh Barnwal <dev.anagh9090>"]
 
 [profile.release]
 opt-level = 3

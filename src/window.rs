@@ -34,7 +34,7 @@ use crate::{
     Settings,
 };
 
-const ID: &str = "dev.heppen.ai";
+const ID: &str = "dev.anagh9090.ai";
 
 #[derive(Debug, Clone)]
 pub enum Pages {
@@ -478,7 +478,7 @@ impl Application for Window {
     fn view(&self) -> Element<'_, Self::Message> {
         self.core
             .applet
-            .icon_button("dev.heppen.ai-symbolic")
+            .icon_button("dev.anagh9090.ai-symbolic")
             .on_press(Message::TogglePopup)
             .into()
     }

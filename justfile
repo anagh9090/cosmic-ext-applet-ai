@@ -33,7 +33,7 @@ build-no-wgpu *args: (build-debug '--release --no-default-features' args)
 build-vendored *args: vendor-extract (build-release '--frozen --offline' args)
 
 _install_icon:
-    install -Dm0644 'data/icons/scalable/apps/dev.heppen.ai-symbolic.svg' {{iconsdir}}/dev.heppen.ai-symbolic.svg
+    install -Dm0644 'data/icons/scalable/apps/dev.anagh9090.ai-symbolic.svg' {{iconsdir}}/dev.anagh9090.ai-symbolic.svg
 
 _install_desktop path:
     install -Dm0644 {{path}} {{sharedir}}/applications/{{file_name(path)}}
@@ -48,13 +48,13 @@ _install_applet id name: \
 
 
 # Installs files into the system
-install:(_install_applet 'dev.heppen.ai' 'cosmic-ext-applet-ai')
+install:(_install_applet 'dev.anagh9090.ai' 'cosmic-ext-applet-ai')
 
 # Uninstall the application from the system
 uninstall:
     rm -f {{bindir}}/{{name}}
-    rm -f {{iconsdir}}/dev.heppen.ai-symbolic.svg
-    rm -f {{sharedir}}/applications/dev.heppen.ai.desktop
+    rm -f {{iconsdir}}/dev.anagh9090.ai-symbolic.svg
+    rm -f {{sharedir}}/applications/dev.anagh9090.ai.desktop
 
 # Vendor Cargo dependencies locally
 vendor:
