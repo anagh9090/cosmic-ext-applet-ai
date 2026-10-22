@@ -2,8 +2,8 @@
   <h1>AI Chat applet for COSMIC Desktop</h1>
   <br>
   <div>
-    <img alt="chat" src="https://github.com/cosmic-utils/cosmic-ext-applet-ai/blob/main/screenshots/chat.png" width="280">
-    <img alt="settings" src="https://github.com/cosmic-utils/cosmic-ext-applet-ai/blob/main/screenshots/settings.png" width="280">
+    <img alt="chat" src="./screenshots/chat.png">
+    <img alt="settings" src="./screenshots/settings.png">
   </div>
 </div>
 
