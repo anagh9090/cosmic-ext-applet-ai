@@ -68,7 +68,6 @@ just build-release
 sudo just install
 ```
 
-Done
 
 From now, you will be able to add applet to your desktop panel/dock
 and chat with different models in real time :)
