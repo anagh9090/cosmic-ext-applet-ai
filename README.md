@@ -84,3 +84,7 @@ If you are affected by this, you can build and install it with this feature disa
 just build-no-wgpu
 sudo just install
 ```
+
+---
+Forked from [cosmic-ext-applet-ollama](https://github.com/cosmic-utils/cosmic-ext-applet-ollama)
+
