@@ -1,5 +1,5 @@
 {
-  "name": "COSMIC AI Chat",
+  "name": "ChatAI",
   "build": {
     "dockerfile": "Containerfile",
     "context": ".."

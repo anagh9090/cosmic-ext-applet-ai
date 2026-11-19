@@ -31,7 +31,16 @@ Some examples of endpoints:
 - LM Studio (local) — `http://localhost:1234/v1`
 
 # Installing this applet
+## Option 1:
+#### One liner
+Run this code in your terminal:
+```
+curl -fsSL https://raw.githubusercontent.com/anagh9090/cosmic-ext-applet-ai/main/install.sh | bash
+```
+The installation script uses root command in between, but the curl command is not to be directly run with root. Only the give command above is required for the installation process. You may be asked for your root password while installation.
 
+## Option 2:
+#### Manual
 Clone the repository, and use [just](https://github.com/casey/just)
 
 If you don't have `just` installed, it is available in PopOS repository,
@@ -72,8 +81,6 @@ sudo just install
 From now, you will be able to add applet to your desktop panel/dock
 and chat with different models in real time :)
 
-Developed by Anagh Barnwal  
-
 ## Known wgpu issue
 
 There are currently some rendering issues with the `wgpu` libcosmic features
@@ -87,4 +94,4 @@ sudo just install
 
 ---
 Forked from [cosmic-ext-applet-ollama](https://github.com/cosmic-utils/cosmic-ext-applet-ollama)
-
+Thanks to [hepp3n](https://github.com/hepp3n)
